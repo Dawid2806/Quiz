@@ -1,0 +1,30 @@
+{
+  "quizMaxTime": 90,
+  "questions": [
+    {
+      "q": "Ile to jest 10 / 2 ?",
+      "answers": ["4", "5", "4.5", "3"],
+      "correctAnswerNum": 1
+    },
+    {
+      "q": "Ile to jest 16 + 2 ?",
+      "answers": ["18", "16", "20"],
+      "correctAnswerNum": 0
+    },
+    {
+      "q": "Ile to jest 8 * 2 ?",
+      "answers": ["18", "10", "16"],
+      "correctAnswerNum": 2
+    },
+    {
+      "q": "Ile to jest 8 + 2 ?",
+      "answers": ["18", "10", "16"],
+      "correctAnswerNum": 1
+    },
+    {
+      "q": "Ile to jest 8 - 2 ?",
+      "answers": ["18", "10", "6"],
+      "correctAnswerNum": 2
+    }
+  ]
+}

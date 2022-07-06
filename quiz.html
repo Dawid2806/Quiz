@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="quiz-container" id="quiz">
+      <div class="quiz-header">
+        <div id="progress">Pytanie 1 z 5</div>
+        <div id="count-down"></div>
+      </div>
+      <div class="quiz-question">
+        <div id="question-heading">Pytanie</div>
+      </div>
+      <div class="quiz-body">
+        <ul id="answers-list"></ul>
+      </div>
+      <div class="summary"></div>
+
+      <button id="submit-answer">Dalej</button>
+      <button id="restart-quiz" class="hide">Zacznij od nowa</button>
+    </div>
+
+    <script src="./dist/index.js"></script>
+  </body>
+</html>
