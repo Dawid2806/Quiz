@@ -1,3 +1,4 @@
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -16,8 +17,8 @@ const submitButton = document.querySelector("#submit-answer");
 const restartButton = document.querySelector("#restart-quiz");
 let currentQuestionIndex = -1;
 let countDownInterval;
-let userSelectedIndex;
-const getData = () => __awaiter(this, void 0, void 0, function* () {
+const selectedAnswers = [];
+const getData = () => __awaiter(void 0, void 0, void 0, function* () {
     const serverData = yield fetch("questions.json");
     const jsonData = yield serverData.json();
     if (!jsonData.questions) {
@@ -28,20 +29,22 @@ const getData = () => __awaiter(this, void 0, void 0, function* () {
     const questions = jsonData.questions;
     return { quizMaxTime, questions };
 });
-const submitAnswer = () => __awaiter(this, void 0, void 0, function* () {
+const submitAnswer = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    const questions = data.questions;
+    const questions = data === null || data === void 0 ? void 0 : data.questions;
     let userSelectedInput = document.querySelector('input[type="radio"]:checked');
-    userSelectedIndex = userSelectedInput.getAttribute("data-index");
-    const question = questions[currentQuestionIndex];
-    question.userSelectedIndex = userSelectedIndex;
+    selectedAnswers.push(userSelectedInput.getAttribute("data-index"));
+    console.log(userSelectedInput.getAttribute("data-index"));
     if (userSelectedInput) {
         nextQuestionData();
     }
 });
-const restartQuiz = () => __awaiter(this, void 0, void 0, function* () {
+const restartQuiz = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    data.questions.forEach((quest) => (quest.userSelectedIndex = -1));
+    if (!(data === null || data === void 0 ? void 0 : data.questions))
+        return;
+    const { questions } = data;
+    questions.forEach((quest) => (quest.userSelectedIndex = -1));
     currentQuestionIndex = -1;
     nextQuestionData();
     countDown();
@@ -50,9 +53,12 @@ const restartQuiz = () => __awaiter(this, void 0, void 0, function* () {
     restartButton.classList.remove("show");
     summary.classList.add("hide");
 });
-const countDown = () => __awaiter(this, void 0, void 0, function* () {
+const countDown = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    const maxTime = data.quizMaxTime;
+    if (!(data === null || data === void 0 ? void 0 : data.quizMaxTime))
+        return;
+    const { quizMaxTime } = data;
+    const maxTime = quizMaxTime;
     if (!countDownInterval) {
         const quizStartTime = new Date().getTime();
         const quizEndTime = quizStartTime + maxTime;
@@ -68,14 +74,15 @@ const countDown = () => __awaiter(this, void 0, void 0, function* () {
         }, 1000);
     }
 });
+countDown();
 const stopCountDown = () => {
     clearInterval(countDownInterval);
     countDownInterval = null;
     countDownInfo.textContent = "";
 };
-const nextQuestionData = () => __awaiter(this, void 0, void 0, function* () {
+const nextQuestionData = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    const questions = data.questions;
+    const questions = data === null || data === void 0 ? void 0 : data.questions;
     currentQuestionIndex++;
     if (currentQuestionIndex >= questions.length) {
         showSummary();
@@ -97,9 +104,9 @@ const nextQuestionData = () => __awaiter(this, void 0, void 0, function* () {
         .join("");
     answersList.innerHTML = answersHtml;
 });
-const showSummary = () => __awaiter(this, void 0, void 0, function* () {
+const showSummary = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    const questions = data.questions;
+    const questions = data === null || data === void 0 ? void 0 : data.questions;
     stopCountDown();
     answersList.classList.add("hide");
     submitButton.classList.add("hide");
@@ -107,47 +114,27 @@ const showSummary = () => __awaiter(this, void 0, void 0, function* () {
     summary.classList.remove("hide");
     questionHeading.innerHTML = "Podsumowanie wyników";
     let numCorrectAnswers = 0;
-    let summaryHtlm = questions
-        .map((question, questionIndex) => {
-        const answerId = "answer" + questionIndex;
-        const answersHtml = question.answers
-            .map((answerText, answerIndex) => {
-            let classToAdd = "";
-            let checkedAttr = "";
-            console.log(question.correctAnswerNum == question.userSelectedIndex);
-            if (userSelectedIndex !== undefined) {
-                if (question.correctAnswerNum == question.userSelectedIndex &&
-                    answerIndex == question.correctAnswerNum) {
-                    classToAdd = "correct-answer";
-                    checkedAttr = "checked";
-                    numCorrectAnswers++;
-                }
-                if (question.userSelectedIndex != question.correctAnswerNum &&
-                    answerIndex == question.userSelectedIndex) {
-                    classToAdd = "wrong-answer";
-                    checkedAttr = "checked";
-                }
-            }
+    const answeredQuestion = questions
+        .map((question, index) => {
+        console.log(question);
+        const correctAnswer = question.answers[question.correctAnswerNum];
+        const selectedAnswerByUserIndex = selectedAnswers[index];
+        const isSelectedAnswerCorrect = Number(question.correctAnswerNum) === Number(selectedAnswerByUserIndex);
+        console.log(selectedAnswerByUserIndex, question.correctAnswerNum, isSelectedAnswerCorrect);
+        if (!isSelectedAnswerCorrect) {
             return `
-            <li class="${classToAdd}">
-            <input ${checkedAttr} disabled type='radio' name="answer" id="${answerId}" data-index="" class="answer" >
-            <label for${answerId}>${answerText}</label>
-            </li>
-          `;
-        })
-            .join("");
-        return `
-        <h4>Pytanie nr.${questionIndex}: ${question.q}
-        <ul>${answersHtml}</ul>
-      `;
+          <li class="wrong-answer">Odpowiedziałeś źle. Poprawną odpowiedzią jest ${correctAnswer}
+          </li>`;
+        }
+        numCorrectAnswers++;
+        return `<li class='correct-answer' >Poprawna odpowiedź!</li>`;
     })
         .join("");
-    summaryHtlm += `
-    <hr>
-      <h3>Ilość prawidłowych odpowiedzi: ${numCorrectAnswers}, na ${questions.length}</h3>
-
-    `;
-    summary.innerHTML = summaryHtlm;
+    const numberOfCorrectAnswersHTML = `
+  <hr>
+    <h3>Ilość prawidłowych odpowiedzi: ${numCorrectAnswers}, na ${questions.length}</h3>
+  `;
+    summary.innerHTML = `${answeredQuestion} ${numberOfCorrectAnswersHTML}`;
 });
 const app = () => {
     nextQuestionData();

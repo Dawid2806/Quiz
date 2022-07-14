@@ -1,9 +1,11 @@
 const progress = document.querySelector("#progress") as HTMLElement;
-const countDownInfo = document.querySelector("#count-down");
-const questionHeading = document.getElementById("question-heading");
+const countDownInfo = document.querySelector("#count-down") as HTMLElement;
+const questionHeading = document.getElementById(
+  "question-heading"
+) as HTMLElement;
 
-const answersList = document.querySelector("#answers-list");
-const summary = document.querySelector(".summary");
+const answersList = document.querySelector("#answers-list") as HTMLElement;
+const summary = document.querySelector(".summary") as HTMLElement;
 const submitButton = document.querySelector(
   "#submit-answer"
 ) as HTMLButtonElement;
@@ -12,10 +14,11 @@ const restartButton = document.querySelector(
 ) as HTMLButtonElement;
 
 let currentQuestionIndex = -1;
-let countDownInterval;
+let countDownInterval: any;
 
-let userSelectedIndex;
-const getData = async <Response>() => {
+const selectedAnswers: string[] = [];
+
+const getData = async () => {
   const serverData = await fetch("questions.json");
   const jsonData = await serverData.json();
 
@@ -30,14 +33,12 @@ const getData = async <Response>() => {
 
 const submitAnswer = async () => {
   const data = await getData();
-  const questions = data.questions;
+  const questions = data?.questions;
   let userSelectedInput = document.querySelector(
     'input[type="radio"]:checked'
   ) as HTMLInputElement;
-
-  userSelectedIndex = userSelectedInput.getAttribute("data-index");
-  const question = questions[currentQuestionIndex];
-  question.userSelectedIndex = userSelectedIndex;
+  selectedAnswers.push(userSelectedInput.getAttribute("data-index") as string);
+  console.log(userSelectedInput.getAttribute("data-index"));
 
   if (userSelectedInput) {
     nextQuestionData();
@@ -46,7 +47,10 @@ const submitAnswer = async () => {
 
 const restartQuiz = async () => {
   const data = await getData();
-  data.questions.forEach((quest) => (quest.userSelectedIndex = -1));
+
+  if (!data?.questions) return;
+  const { questions } = data;
+  questions.forEach((quest: questions) => (quest.userSelectedIndex = -1));
   currentQuestionIndex = -1;
   nextQuestionData();
   countDown();
@@ -58,10 +62,13 @@ const restartQuiz = async () => {
 
 const countDown = async () => {
   const data = await getData();
-  const maxTime = data.quizMaxTime;
+  if (!data?.quizMaxTime) return;
+  const { quizMaxTime } = data;
+  const maxTime: number = quizMaxTime;
+
   if (!countDownInterval) {
     const quizStartTime = new Date().getTime();
-    const quizEndTime = quizStartTime + maxTime;
+    const quizEndTime: number = quizStartTime + maxTime;
 
     countDownInterval = setInterval(() => {
       const currentTime = new Date().getTime();
@@ -75,7 +82,8 @@ const countDown = async () => {
     }, 1000);
   }
 };
-const stopCountDown = () => {
+countDown();
+const stopCountDown = (): void => {
   clearInterval(countDownInterval);
   countDownInterval = null;
   countDownInfo.textContent = "";
@@ -83,7 +91,7 @@ const stopCountDown = () => {
 
 const nextQuestionData = async () => {
   const data = await getData();
-  const questions = data.questions;
+  const questions = data?.questions;
   currentQuestionIndex++;
 
   if (currentQuestionIndex >= questions.length) {
@@ -97,7 +105,7 @@ const nextQuestionData = async () => {
   }`;
   progress.innerHTML = progressInfo;
   const answersHtml = question.answers
-    .map((answerText, index) => {
+    .map((answerText: string, index: number) => {
       const answerId = "answer" + index;
       return `<li>
       <input type ='radio' name='answer' id='${answerId}'
@@ -111,7 +119,7 @@ const nextQuestionData = async () => {
 
 const showSummary = async () => {
   const data = await getData();
-  const questions = data.questions;
+  const questions = data?.questions;
   stopCountDown();
   answersList.classList.add("hide");
   submitButton.classList.add("hide");
@@ -121,53 +129,34 @@ const showSummary = async () => {
   questionHeading.innerHTML = "Podsumowanie wyników";
 
   let numCorrectAnswers = 0;
-  let summaryHtlm = questions
+  const answeredQuestion = questions
+    .map((question: questions, index: number) => {
+      console.log(question);
+      const correctAnswer = question.answers[question.correctAnswerNum];
+      const selectedAnswerByUserIndex = selectedAnswers[index];
+      const isSelectedAnswerCorrect =
+        Number(question.correctAnswerNum) === Number(selectedAnswerByUserIndex);
+      console.log(
+        selectedAnswerByUserIndex,
+        question.correctAnswerNum,
+        isSelectedAnswerCorrect
+      );
 
-    .map((question, questionIndex) => {
-      const answerId = "answer" + questionIndex;
-      const answersHtml = question.answers
-        .map((answerText, answerIndex) => {
-          let classToAdd = "";
-          let checkedAttr = "";
-          console.log(question.correctAnswerNum == question.userSelectedIndex);
-          if (userSelectedIndex !== undefined) {
-            if (
-              question.correctAnswerNum == question.userSelectedIndex &&
-              answerIndex == question.correctAnswerNum
-            ) {
-              classToAdd = "correct-answer";
-              checkedAttr = "checked";
-              numCorrectAnswers++;
-            }
-            if (
-              question.userSelectedIndex != question.correctAnswerNum &&
-              answerIndex == question.userSelectedIndex
-            ) {
-              classToAdd = "wrong-answer";
-              checkedAttr = "checked";
-            }
-          }
-          return `
-            <li class="${classToAdd}">
-            <input ${checkedAttr} disabled type='radio' name="answer" id="${answerId}" data-index="" class="answer" >
-            <label for${answerId}>${answerText}</label>
-            </li>
-          `;
-        })
-        .join("");
-      return `
-        <h4>Pytanie nr.${questionIndex}: ${question.q}
-        <ul>${answersHtml}</ul>
-      `;
+      if (!isSelectedAnswerCorrect) {
+        return `
+          <li class="wrong-answer">Odpowiedziałeś źle. Poprawną odpowiedzią jest ${correctAnswer}
+          </li>`;
+      }
+      numCorrectAnswers++;
+      return `<li class='correct-answer' >Poprawna odpowiedź!</li>`;
     })
     .join("");
 
-  summaryHtlm += `
-    <hr>
-      <h3>Ilość prawidłowych odpowiedzi: ${numCorrectAnswers}, na ${questions.length}</h3>
-
-    `;
-  summary.innerHTML = summaryHtlm;
+  const numberOfCorrectAnswersHTML = `
+  <hr>
+    <h3>Ilość prawidłowych odpowiedzi: ${numCorrectAnswers}, na ${questions.length}</h3>
+  `;
+  summary.innerHTML = `${answeredQuestion} ${numberOfCorrectAnswersHTML}`;
 };
 const app = () => {
   nextQuestionData();
@@ -177,4 +166,16 @@ submitButton.addEventListener("click", submitAnswer);
 restartButton.addEventListener("click", restartQuiz);
 window.onload = () => {
   app();
+};
+
+type Questions = [questions];
+
+type questions = {
+  quizMaxTime: number;
+  questions: string[];
+  q: string;
+  answers: string[];
+  correctAnswerNum: number;
+  userSelectedIndex: number;
+  countDownInterval: any;
 };
