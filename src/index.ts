@@ -177,5 +177,4 @@ type questions = {
   answers: string[];
   correctAnswerNum: number;
   userSelectedIndex: number;
-  countDownInterval: any;
 };
