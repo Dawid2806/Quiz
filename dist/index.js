@@ -41,10 +41,8 @@ const submitAnswer = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 const restartQuiz = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    if (!(data === null || data === void 0 ? void 0 : data.questions))
-        return;
-    const { questions } = data;
-    questions.forEach((quest) => (quest.userSelectedIndex = -1));
+    data === null || data === void 0 ? void 0 : data.questions.forEach((quest) => (quest.userSelectedIndex = -1));
+    console.log(data === null || data === void 0 ? void 0 : data.questions.forEach((quest) => (quest.userSelectedIndex = -1)));
     currentQuestionIndex = -1;
     nextQuestionData();
     countDown();
@@ -55,10 +53,8 @@ const restartQuiz = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 const countDown = () => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield getData();
-    if (!(data === null || data === void 0 ? void 0 : data.quizMaxTime))
-        return;
-    const { quizMaxTime } = data;
-    const maxTime = quizMaxTime;
+    const maxTime = data === null || data === void 0 ? void 0 : data.quizMaxTime;
+    console.log(typeof maxTime);
     if (!countDownInterval) {
         const quizStartTime = new Date().getTime();
         const quizEndTime = quizStartTime + maxTime;
@@ -114,8 +110,7 @@ const showSummary = () => __awaiter(void 0, void 0, void 0, function* () {
     summary.classList.remove("hide");
     questionHeading.innerHTML = "Podsumowanie wyników";
     let numCorrectAnswers = 0;
-    const answeredQuestion = questions
-        .map((question, index) => {
+    const answeredQuestion = questions.map((question, index) => {
         console.log(question);
         const correctAnswer = question.answers[question.correctAnswerNum];
         const selectedAnswerByUserIndex = selectedAnswers[index];
@@ -123,13 +118,12 @@ const showSummary = () => __awaiter(void 0, void 0, void 0, function* () {
         console.log(selectedAnswerByUserIndex, question.correctAnswerNum, isSelectedAnswerCorrect);
         if (!isSelectedAnswerCorrect) {
             return `
-          <li class="wrong-answer">Odpowiedziałeś źle. Poprawną odpowiedzią jest ${correctAnswer}
-          </li>`;
+          <div>Odpowiedziałeś źle. Poprawną odpowiedzią jest ${correctAnswer}
+        `;
         }
         numCorrectAnswers++;
-        return `<li class='correct-answer' >Poprawna odpowiedź!</li>`;
-    })
-        .join("");
+        return `<div>Poprawna odpowiedź!`;
+    });
     const numberOfCorrectAnswersHTML = `
   <hr>
     <h3>Ilość prawidłowych odpowiedzi: ${numCorrectAnswers}, na ${questions.length}</h3>

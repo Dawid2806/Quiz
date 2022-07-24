@@ -1,7 +1,8 @@
-const progress = document.querySelector("#progress") as HTMLElement;
+const getProgressElement = (): HTMLDivElement | null =>
+  document.querySelector("#progress");
 const countDownInfo = document.querySelector("#count-down") as HTMLElement;
-const questionHeading = document.getElementById(
-  "question-heading"
+const questionHeading = document.querySelector(
+  "#question-heading"
 ) as HTMLElement;
 
 const answersList = document.querySelector("#answers-list") as HTMLElement;
@@ -14,88 +15,85 @@ const restartButton = document.querySelector(
 ) as HTMLButtonElement;
 
 let currentQuestionIndex = -1;
-let countDownInterval: any;
 
 const selectedAnswers: string[] = [];
+let questionsState: QuestionsJSON | undefined = undefined;
 
-const getData = async () => {
+const getData = async (): Promise<QuestionsJSON | undefined> => {
   const serverData = await fetch("questions.json");
-  const jsonData = await serverData.json();
+  const jsonData: QuestionsJSON = await serverData.json();
 
   if (!jsonData.questions) {
     console.log("Brak pytań");
     return;
   }
   const quizMaxTime = jsonData.quizMaxTime * 1000;
-  const questions = jsonData.questions;
+  const questions = jsonData.questions.map((question) => ({
+    ...question,
+    userSelectedIndex: -1,
+  }));
   return { quizMaxTime, questions };
 };
 
-const submitAnswer = async () => {
-  const data = await getData();
-  const questions = data?.questions;
-  let userSelectedInput = document.querySelector(
+const submitAnswer = async (interval: number) => {
+  const userSelectedInput = document.querySelector(
     'input[type="radio"]:checked'
   ) as HTMLInputElement;
   selectedAnswers.push(userSelectedInput.getAttribute("data-index") as string);
   console.log(userSelectedInput.getAttribute("data-index"));
 
   if (userSelectedInput) {
-    nextQuestionData();
+    nextQuestionData(interval);
   }
 };
 
-const restartQuiz = async () => {
-  const data = await getData();
-
-  if (!data?.questions) return;
-  const { questions } = data;
-  questions.forEach((quest: questions) => (quest.userSelectedIndex = -1));
+const restartQuiz = (interval: number) => {
+  if (!questionsState?.questions) return;
+  const { questions } = questionsState;
+  questions.forEach((quest) => (quest.userSelectedIndex = -1));
   currentQuestionIndex = -1;
-  nextQuestionData();
-  countDown();
+  nextQuestionData(interval);
+  stopCountDown(interval);
   answersList.classList.remove("hide");
   submitButton.classList.remove("hide");
   restartButton.classList.remove("show");
   summary.classList.add("hide");
 };
 
-const countDown = async () => {
-  const data = await getData();
-  if (!data?.quizMaxTime) return;
-  const { quizMaxTime } = data;
-  const maxTime: number = quizMaxTime;
+const getCountDownInterval = () => {
+  if (!questionsState?.quizMaxTime) return;
+  const { quizMaxTime } = questionsState;
+  const maxTime = quizMaxTime;
 
-  if (!countDownInterval) {
-    const quizStartTime = new Date().getTime();
-    const quizEndTime: number = quizStartTime + maxTime;
+  const quizStartTime = new Date().getTime();
+  const quizEndTime: number = quizStartTime + maxTime;
 
-    countDownInterval = setInterval(() => {
-      const currentTime = new Date().getTime();
-      if (currentTime >= quizEndTime) {
-        stopCountDown();
-        showSummary();
-        return;
-      }
-      let timeLeft = Math.floor((quizEndTime - currentTime) / 1000);
-      countDownInfo.textContent = "Pozostało:" + timeLeft + "sek";
-    }, 1000);
-  }
+  const interval = setInterval(() => {
+    const currentTime = new Date().getTime();
+    if (currentTime >= quizEndTime) {
+      stopCountDown(interval);
+      showSummary(interval);
+      return;
+    }
+    let timeLeft = Math.floor((quizEndTime - currentTime) / 1000);
+    countDownInfo.textContent = "Pozostało:" + timeLeft + "sek";
+  }, 1000);
+  return interval;
 };
-countDown();
-const stopCountDown = (): void => {
-  clearInterval(countDownInterval);
-  countDownInterval = null;
+
+const stopCountDown = (intervalId: number) => {
+  clearInterval(intervalId);
   countDownInfo.textContent = "";
 };
 
-const nextQuestionData = async () => {
-  const data = await getData();
-  const questions = data?.questions;
+const nextQuestionData = async (intervalId: number) => {
+  const questions = questionsState?.questions;
+  if (!questions) return;
+  const progress = getProgressElement();
   currentQuestionIndex++;
 
   if (currentQuestionIndex >= questions.length) {
-    showSummary();
+    showSummary(intervalId);
     return;
   }
   const question = questions[currentQuestionIndex];
@@ -103,9 +101,10 @@ const nextQuestionData = async () => {
   const progressInfo = `Pytanie ${currentQuestionIndex + 1} z ${
     questions.length
   }`;
+  if (!progress) return;
   progress.innerHTML = progressInfo;
   const answersHtml = question.answers
-    .map((answerText: string, index: number) => {
+    .map((answerText, index) => {
       const answerId = "answer" + index;
       return `<li>
       <input type ='radio' name='answer' id='${answerId}'
@@ -117,10 +116,10 @@ const nextQuestionData = async () => {
   answersList.innerHTML = answersHtml;
 };
 
-const showSummary = async () => {
-  const data = await getData();
-  const questions = data?.questions;
-  stopCountDown();
+const showSummary = async (intervalId: number) => {
+  const questions = questionsState?.questions;
+  if (!questions) return;
+  stopCountDown(intervalId);
   answersList.classList.add("hide");
   submitButton.classList.add("hide");
   restartButton.classList.add("show");
@@ -130,7 +129,7 @@ const showSummary = async () => {
 
   let numCorrectAnswers = 0;
   const answeredQuestion = questions
-    .map((question: questions, index: number) => {
+    .map((question, index) => {
       console.log(question);
       const correctAnswer = question.answers[question.correctAnswerNum];
       const selectedAnswerByUserIndex = selectedAnswers[index];
@@ -153,26 +152,42 @@ const showSummary = async () => {
     .join("");
 
   const numberOfCorrectAnswersHTML = `
-  <hr>
+  <hr />
     <h3>Ilość prawidłowych odpowiedzi: ${numCorrectAnswers}, na ${questions.length}</h3>
   `;
   summary.innerHTML = `${answeredQuestion} ${numberOfCorrectAnswersHTML}`;
 };
-const app = () => {
-  nextQuestionData();
+const app = async () => {
+  const interval = getCountDownInterval();
+  if (!interval) return;
+  questionsState = await getData();
+  nextQuestionData(interval);
+
+  submitButton.addEventListener("click", () => submitAnswer(interval));
+  restartButton.addEventListener("click", () => restartQuiz(interval));
 };
 
-submitButton.addEventListener("click", submitAnswer);
-restartButton.addEventListener("click", restartQuiz);
 window.onload = () => {
-  app();
+  void app();
 };
 
 type Questions = [questions];
 
 type questions = {
   quizMaxTime: number;
-  questions: string[];
+  questions: Question[];
+  q: string;
+  answers: string[];
+  correctAnswerNum: number;
+  userSelectedIndex: number;
+};
+
+type QuestionsJSON = {
+  quizMaxTime: number;
+  questions: Question[];
+};
+
+type Question = {
   q: string;
   answers: string[];
   correctAnswerNum: number;
